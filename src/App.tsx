@@ -24,9 +24,12 @@ import {
   Plus,
   Pencil,
   Check,
-  X
+  X,
+  FileDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 // --- Types ---
 
@@ -409,6 +412,70 @@ export default function App() {
     setView('estimator');
   };
 
+  const generatePDF = (estimate: SavedEstimate) => {
+    const doc = new jsPDF();
+    const { data: estData, results: estResults, id, date } = estimate;
+    const currency = appConfig.currency;
+
+    // Header
+    doc.setFontSize(22);
+    doc.setTextColor(79, 70, 229); // Indigo-600
+    doc.text('PRINT ESTIMATE', 14, 22);
+    
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`ID: ${id}`, 14, 30);
+    doc.text(`Date: ${date}`, 14, 35);
+
+    // Project Title
+    doc.setFontSize(16);
+    doc.setTextColor(30, 41, 59); // Slate-800
+    doc.text(estData.jobName || 'UNTITLED PROJECT', 14, 48);
+
+    // Summary Table
+    const summaryData = [
+      ['Specifications', 'Value'],
+      ['Quantity', estData.quantity.toLocaleString()],
+      ['Pages', estData.pages.toString()],
+      ['Dimensions', `${estData.width}" x ${estData.height}"`],
+      ['Stock', `${estData.paperType} (${estData.gsm}gsm)`],
+      ['Colors', `${estData.colorsFront} + ${estData.colorsBack}`]
+    ];
+
+    autoTable(doc, {
+      startY: 55,
+      head: [summaryData[0]],
+      body: summaryData.slice(1),
+      theme: 'striped',
+      headStyles: { fillColor: [79, 70, 229] }
+    });
+
+    // Cost Breakdown
+    const costData = [
+      ['Category', 'Amount'],
+      ...estResults.breakdown.map((item: any) => [item.label, `${currency} ${Math.round(item.value).toLocaleString()}`]),
+      [{ content: 'TOTAL ESTIMATE', styles: { fontStyle: 'bold' } }, { content: `${currency} ${Math.round(estResults.totalCost).toLocaleString()}`, styles: { fontStyle: 'bold' } }]
+    ];
+
+    autoTable(doc, {
+      startY: (doc as any).lastAutoTable.finalY + 10,
+      head: [costData[0]],
+      body: costData.slice(1),
+      theme: 'grid',
+      headStyles: { fillColor: [30, 41, 59] }
+    });
+
+    // Unit Cost
+    doc.setFontSize(12);
+    doc.setTextColor(16, 185, 129); // Emerald-500
+    doc.text(`Unit Cost: ${currency} ${estResults.unitCost.toFixed(4)}`, 14, (doc as any).lastAutoTable.finalY + 15);
+
+    // Open PDF in new tab for preview
+    const pdfBlob = doc.output('blob');
+    const pdfUrl = URL.createObjectURL(pdfBlob);
+    window.open(pdfUrl, '_blank');
+  };
+
   return (
     <div className="h-screen bg-slate-50 flex flex-col md:flex-row overflow-hidden selection:bg-indigo-100">
       {/* --- Left Mini-Navigation (Desktop) --- */}
@@ -521,7 +588,7 @@ export default function App() {
                 className="flex-1 flex flex-col md:flex-row overflow-y-auto md:overflow-hidden"
               >
                 {/* Forms Grid Area */}
-                <section className="flex-none md:flex-1 p-4 md:p-6 grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6 text-slate-800">
+                <section className="flex-none md:flex-1 p-4 md:p-6 grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6 md:overflow-y-auto text-slate-800">
                 {/* Job Details Card */}
                 <div className="bg-white border border-slate-200 rounded-xl p-4 md:p-5 shadow-sm space-y-4">
                   <div className="flex items-center gap-2 mb-2">
@@ -849,7 +916,7 @@ export default function App() {
               </section>
 
                 {/* Sidebar Summary */}
-                <aside className="w-full md:w-80 bg-white border-t md:border-t-0 md:border-l border-slate-200 flex flex-col flex-shrink-0 h-auto md:h-full md:overflow-hidden">
+                <aside className="w-full md:w-80 bg-white border-t md:border-t-0 md:border-l border-slate-200 flex flex-col flex-shrink-0 h-auto md:h-full md:overflow-y-auto">
                   <div className="p-4 md:p-6 border-b border-slate-100 flex-shrink-0">
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Pricing Summary</h3>
@@ -985,6 +1052,13 @@ export default function App() {
                           <div className="text-[10px] uppercase font-bold text-emerald-500 tracking-wider">Final Estimate</div>
                         </div>
                         <div className="flex items-center gap-1 md:gap-2">
+                          <button 
+                            onClick={() => generatePDF(est)}
+                            className="p-2 hover:bg-emerald-50 text-emerald-600 rounded-lg transition-colors cursor-pointer"
+                            title="Preview PDF"
+                          >
+                            <FileDown size={18} />
+                          </button>
                           <button 
                             onClick={() => loadEstimate(est)}
                             className="p-2 hover:bg-indigo-50 text-indigo-600 rounded-lg transition-colors cursor-pointer"
