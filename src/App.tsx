@@ -410,9 +410,9 @@ export default function App() {
   };
 
   return (
-    <div className="h-screen bg-slate-50 flex overflow-hidden selection:bg-indigo-100">
-      {/* --- Left Mini-Navigation --- */}
-      <aside className="w-16 bg-slate-900 flex flex-col items-center py-6 gap-8 border-r border-slate-800 flex-shrink-0">
+    <div className="h-screen bg-slate-50 flex flex-col md:flex-row overflow-hidden selection:bg-indigo-100">
+      {/* --- Left Mini-Navigation (Desktop) --- */}
+      <aside className="hidden md:flex w-16 bg-slate-900 flex-col items-center py-6 gap-8 border-r border-slate-800 flex-shrink-0">
         <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold shadow-lg shadow-indigo-500/20">
           PE
         </div>
@@ -438,23 +438,34 @@ export default function App() {
         </div>
       </aside>
 
+      {/* --- Bottom Navigation (Mobile) --- */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 flex justify-around items-center py-3 px-6 z-50">
+        <button onClick={() => setView('estimator')} className={`flex flex-col items-center gap-1 ${view === 'estimator' ? 'text-indigo-400' : 'text-slate-500'}`}>
+          <Calculator size={20} />
+          <span className="text-[10px] font-bold uppercase tracking-widest">Calc</span>
+        </button>
+        <button onClick={() => setView('history')} className={`flex flex-col items-center gap-1 ${view === 'history' ? 'text-indigo-400' : 'text-slate-500'}`}>
+          <FileText size={20} />
+          <span className="text-[10px] font-bold uppercase tracking-widest">History</span>
+        </button>
+        <button onClick={() => setView('config')} className={`flex flex-col items-center gap-1 ${view === 'config' ? 'text-indigo-400' : 'text-slate-500'}`}>
+          <Settings size={20} />
+          <span className="text-[10px] font-bold uppercase tracking-widest">Setup</span>
+        </button>
+      </nav>
+
       {/* --- Main Content Body --- */}
-      <main className="flex-1 flex flex-col overflow-hidden">
+      <main className="flex-1 flex flex-col overflow-hidden pb-16 md:pb-0">
         {/* Top Header Bar */}
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 flex-shrink-0">
+        <header className="h-14 md:h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 flex-shrink-0">
           <div className="flex items-center gap-3">
-            <h1 className="text-xl font-semibold text-slate-800">
+            <h1 className="text-base md:text-xl font-semibold text-slate-800">
               {view === 'estimator' && 'Cost Estimator'}
-              {view === 'history' && 'Estimation History'}
-              {view === 'config' && 'System Configuration'}
+              {view === 'history' && 'History'}
+              {view === 'config' && 'Setup'}
             </h1>
-            {view === 'estimator' && (
-              <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-xs font-mono rounded border border-slate-200">
-                Live Draft
-              </span>
-            )}
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-2 md:gap-3">
             {view === 'estimator' && (
               <button 
                 onClick={() => setData({
@@ -489,17 +500,12 @@ export default function App() {
                   perforation: false,
                   creasing: false,
                   margin: 20,
+                  taxRate: 0,
                   shipping: 1000,
                 })}
-                className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-md transition-colors"
+                className="px-2 md:px-4 py-1.5 md:py-2 text-[10px] md:text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-md transition-colors"
               >
-                Clear Data
-              </button>
-            )}
-            {view !== 'config' && (
-              <button className="px-4 py-2 text-sm font-medium bg-slate-100 text-slate-600 rounded-md hover:bg-slate-200 transition-all flex items-center gap-2">
-                <Download size={16} />
-                Export CSV
+                Reset
               </button>
             )}
           </div>
@@ -507,20 +513,20 @@ export default function App() {
 
         <AnimatePresence mode="wait">
           {view === 'estimator' && (
-            <motion.div 
-              key="estimator"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="flex-1 flex overflow-hidden"
-            >
-              {/* Forms Grid Area */}
-              <section className="flex-1 p-6 grid grid-cols-1 xl:grid-cols-2 gap-6 overflow-y-auto pb-24 text-slate-800">
+              <motion.div 
+                key="estimator"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="flex-1 flex flex-col md:flex-row overflow-y-auto md:overflow-hidden"
+              >
+                {/* Forms Grid Area */}
+                <section className="flex-none md:flex-1 p-4 md:p-6 grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6 text-slate-800">
                 {/* Job Details Card */}
-                <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
+                <div className="bg-white border border-slate-200 rounded-xl p-4 md:p-5 shadow-sm space-y-4">
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-1 h-5 bg-indigo-500 rounded-full"></div>
-                    <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500">Job & Quantity</h2>
+                    <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500">Job & Quantity</h2>
                   </div>
                   <div className="space-y-4">
                     <InputGroup label="PROJECT NAME">
@@ -533,7 +539,7 @@ export default function App() {
                         placeholder="Untitled Project"
                       />
                     </InputGroup>
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
                       <InputGroup label="QUANTITY">
                         <input 
                           type="number" 
@@ -559,7 +565,7 @@ export default function App() {
                             name="width"
                             value={data.width}
                             onChange={handleChange}
-                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all"
+                            className="w-full px-2 md:px-3 py-2 bg-slate-50 border border-slate-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all"
                           />
                           <span className="text-slate-300">×</span>
                           <input 
@@ -567,7 +573,7 @@ export default function App() {
                             name="height"
                             value={data.height}
                             onChange={handleChange}
-                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all"
+                            className="w-full px-2 md:px-3 py-2 bg-slate-50 border border-slate-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all"
                           />
                         </div>
                       </InputGroup>
@@ -842,33 +848,29 @@ export default function App() {
                 </div>
               </section>
 
-              {/* Sidebar Summary */}
-              <aside className="w-80 bg-white border-l border-slate-200 flex flex-col flex-shrink-0 overflow-hidden">
-                <div className="p-6 border-b border-slate-100 overflow-y-auto max-h-screen">
+                {/* Sidebar Summary */}
+                <aside className="w-full md:w-80 bg-white border-t md:border-t-0 md:border-l border-slate-200 flex flex-col flex-shrink-0 h-auto md:h-full md:overflow-hidden">
+                  <div className="p-4 md:p-6 border-b border-slate-100 flex-shrink-0">
                   <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest text-slate-400">Pricing Summary</h3>
-                    <span className="flex h-2 w-2 relative">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                    </span>
+                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Pricing Summary</h3>
                   </div>
-                  <div className="text-4xl font-light text-slate-800">
-                    <span className="text-2xl mr-1">{appConfig.currency}</span>{Math.floor(results.totalCost).toLocaleString()}<span className="text-xl font-medium text-slate-400">.{(results.totalCost % 1).toFixed(2).split('.')[1]}</span>
+                  <div className="text-3xl md:text-4xl font-light text-slate-800 overflow-hidden text-ellipsis whitespace-nowrap">
+                    <span className="text-xl md:text-2xl mr-1">{appConfig.currency}</span>{Math.floor(results.totalCost).toLocaleString()}<span className="text-lg md:text-xl font-medium text-slate-400">.{(results.totalCost % 1).toFixed(2).split('.')[1]}</span>
                   </div>
                   <p className="text-xs text-emerald-600 font-semibold mt-1 flex items-center gap-1">
                     <Zap size={12} />
-                    Unit Cost: {appConfig.currency} {results.unitCost.toFixed(4)}
+                    Unit: {appConfig.currency} {results.unitCost.toFixed(4)}
                   </p>
 
-                  <div className="mt-8 space-y-6">
-                    <div className="grid grid-cols-2 gap-4 text-center">
-                      <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+                  <div className="mt-6 md:mt-8 space-y-4 md:space-y-6">
+                    <div className="grid grid-cols-2 gap-3 md:gap-4 text-center">
+                      <div className="p-2 md:p-3 bg-slate-50 rounded-lg border border-slate-100">
                         <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">Outs</div>
-                        <div className="text-lg font-bold text-slate-700 font-mono">{results.outs}</div>
+                        <div className="text-base md:text-lg font-bold text-slate-700 font-mono">{results.outs}</div>
                       </div>
-                      <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+                      <div className="p-2 md:p-3 bg-slate-50 rounded-lg border border-slate-100">
                         <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">Total Shts</div>
-                        <div className="text-lg font-bold text-slate-700 font-mono">{results.totalSheets}</div>
+                        <div className="text-base md:text-lg font-bold text-slate-700 font-mono">{results.totalSheets}</div>
                       </div>
                     </div>
 
@@ -890,7 +892,7 @@ export default function App() {
                       ))}
                     </div>
 
-                    <div className="pt-4 border-t border-slate-100 space-y-4">
+                    <div className="pt-4 border-t border-slate-100 space-y-4 pb-4 md:pb-0">
                       <div className="space-y-2">
                         <div className="flex justify-between text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                           <span>Profit Margin</span>
@@ -953,38 +955,36 @@ export default function App() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              className="flex-1 p-8 overflow-y-auto"
+              className="flex-1 p-4 md:p-8 overflow-y-auto"
             >
               <div className="max-w-4xl mx-auto space-y-6">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-bold text-slate-800">Recent Calculations</h2>
-                  <span className="text-sm text-slate-400">{savedEstimates.length} Saved Records</span>
+                  <h2 className="text-xl md:text-2xl font-bold text-slate-800">Calculations</h2>
+                  <span className="text-xs text-slate-400">{savedEstimates.length} Records</span>
                 </div>
 
-                <div className="grid gap-4">
+                <div className="grid gap-3 md:gap-4">
                   {savedEstimates.map((est) => (
-                    <div key={est.id} className="group bg-white border border-slate-200 rounded-xl p-5 flex items-center justify-between hover:border-indigo-400 transition-all shadow-sm">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center">
-                          <FileText size={24} />
+                    <div key={est.id} className="group bg-white border border-slate-200 rounded-xl p-3 md:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between hover:border-indigo-400 transition-all shadow-sm gap-4">
+                      <div className="flex items-center gap-3 md:gap-4 w-full sm:w-auto">
+                        <div className="w-10 h-10 md:w-12 md:h-12 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <FileText size={20} md:size={24} />
                         </div>
-                        <div>
-                          <h4 className="font-bold text-slate-800 group-hover:text-indigo-600 transition-colors uppercase">{est.data.jobName || 'Untitled Project'}</h4>
-                          <div className="flex items-center gap-3 text-xs text-slate-400 mt-1">
-                            <span className="font-mono">{est.id}</span>
+                        <div className="min-w-0 flex-1">
+                          <h4 className="font-bold text-slate-800 group-hover:text-indigo-600 transition-colors uppercase truncate text-sm md:text-base">{est.data.jobName || 'Untitled Project'}</h4>
+                          <div className="flex flex-wrap items-center gap-2 md:gap-3 text-xs text-slate-400 mt-1">
+                            <span className="font-mono text-[10px] md:text-xs">{est.id}</span>
                             <span>•</span>
-                            <span>{est.date}</span>
-                            <span>•</span>
-                            <span>Qty: {est.data.quantity.toLocaleString()}</span>
+                            <span className="whitespace-nowrap">{est.date}</span>
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-8">
-                        <div className="text-right">
-                          <div className="text-xl font-bold text-slate-900">{appConfig.currency} {Math.round(est.results.totalCost).toLocaleString()}</div>
+                      <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto border-t sm:border-t-0 pt-3 sm:pt-0">
+                        <div className="text-left sm:text-right">
+                          <div className="text-lg md:text-xl font-bold text-slate-900">{appConfig.currency} {Math.round(est.results.totalCost).toLocaleString()}</div>
                           <div className="text-[10px] uppercase font-bold text-emerald-500 tracking-wider">Final Estimate</div>
                         </div>
-                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center gap-1 md:gap-2">
                           <button 
                             onClick={() => loadEstimate(est)}
                             className="p-2 hover:bg-indigo-50 text-indigo-600 rounded-lg transition-colors cursor-pointer"
@@ -1025,13 +1025,13 @@ export default function App() {
               initial={{ opacity: 0, scale: 0.98 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.98 }}
-              className="flex-1 p-8 overflow-y-auto"
+              className="flex-1 p-4 md:p-8 overflow-y-auto"
             >
-              <div className="max-w-3xl mx-auto space-y-8 pb-24">
-                <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+              <div className="max-w-3xl mx-auto space-y-6 md:space-y-8 pb-24">
+                <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-200 pb-4 gap-2">
                   <div>
-                    <h2 className="text-2xl font-bold text-slate-800 mb-2">Master Cost Settings</h2>
-                    <p className="text-slate-500 text-sm">Define base prices used for all new calculations. Draft changes here and save to apply.</p>
+                    <h2 className="text-xl md:text-2xl font-bold text-slate-800 mb-1 md:mb-2">Admin Setup</h2>
+                    <p className="text-slate-500 text-xs md:text-sm">Configure master rates and system defaults.</p>
                   </div>
                   {JSON.stringify(appConfig) !== JSON.stringify(localConfig) && (
                     <motion.span 
@@ -1278,24 +1278,24 @@ export default function App() {
                 </div>
 
                 {/* Bottom Action Bar */}
-                <div className="flex items-center justify-between bg-white border border-slate-200 p-4 rounded-xl shadow-lg sticky bottom-0 z-20">
-                  <p className="text-xs text-slate-500 max-w-sm">Changes made here affect all future estimates. Ensure accuracy before saving.</p>
-                  <div className="flex gap-4">
+                <div className="flex flex-col md:flex-row items-center justify-between bg-white border border-slate-200 p-4 rounded-xl shadow-lg sticky bottom-0 z-20 gap-4">
+                  <p className="text-[10px] md:text-xs text-slate-500 max-w-sm text-center md:text-left">Changes affect future estimates. Save to apply.</p>
+                  <div className="flex gap-2 md:gap-4 w-full md:w-auto">
                     <button 
                       onClick={() => setLocalConfig(appConfig)}
-                      className="px-4 py-2 text-slate-600 font-bold text-sm hover:bg-slate-50 rounded-lg transition-all"
+                      className="flex-1 md:flex-none px-4 py-2 text-slate-600 font-bold text-xs md:text-sm hover:bg-slate-50 rounded-lg transition-all border border-slate-100 md:border-0"
                     >
-                      Discard Draft
+                      Discard
                     </button>
                     <button 
                       onClick={() => {
                          setAppConfig(localConfig);
                          setView('estimator');
                       }}
-                      className="px-8 py-2 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 flex items-center gap-2"
+                      className="flex-1 md:flex-none px-6 md:px-8 py-2 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 flex items-center justify-center gap-2 text-xs md:text-sm"
                     >
-                      <Save size={18} />
-                      Save All Settings
+                      <Save size={16} md:size={18} />
+                      Save All
                     </button>
                   </div>
                 </div>
