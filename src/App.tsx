@@ -21,7 +21,10 @@ import {
   Save,
   Trash2,
   ExternalLink,
-  Plus
+  Plus,
+  Pencil,
+  Check,
+  X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -195,6 +198,16 @@ export default function App() {
     }
     return DEFAULT_CONFIG;
   });
+
+  // Local state for the config view to allow "Save Settings" pattern
+  const [localConfig, setLocalConfig] = useState<AppConfig>(appConfig);
+
+  // Sync localConfig when entering config view
+  useEffect(() => {
+    if (view === 'config') {
+      setLocalConfig(appConfig);
+    }
+  }, [view, appConfig]);
   
   const [savedEstimates, setSavedEstimates] = useState<SavedEstimate[]>(() => {
     const saved = localStorage.getItem('print_saved_estimates');
@@ -1006,7 +1019,6 @@ export default function App() {
               </div>
             </motion.div>
           )}
-
           {view === 'config' && (
             <motion.div 
               key="config"
@@ -1015,10 +1027,21 @@ export default function App() {
               exit={{ opacity: 0, scale: 0.98 }}
               className="flex-1 p-8 overflow-y-auto"
             >
-              <div className="max-w-2xl mx-auto space-y-8">
-                <div>
-                  <h2 className="text-2xl font-bold text-slate-800 mb-2">Master Cost Settings</h2>
-                  <p className="text-slate-500 text-sm">Define base prices used for all new calculations. All modifications are persisted to local storage.</p>
+              <div className="max-w-3xl mx-auto space-y-8 pb-24">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+                  <div>
+                    <h2 className="text-2xl font-bold text-slate-800 mb-2">Master Cost Settings</h2>
+                    <p className="text-slate-500 text-sm">Define base prices used for all new calculations. Draft changes here and save to apply.</p>
+                  </div>
+                  {JSON.stringify(appConfig) !== JSON.stringify(localConfig) && (
+                    <motion.span 
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className="px-3 py-1 bg-amber-50 text-amber-600 text-[10px] font-bold uppercase rounded-full border border-amber-200"
+                    >
+                      Unsaved Changes
+                    </motion.span>
+                  )}
                 </div>
 
                 {/* Regional Settings */}
@@ -1027,25 +1050,28 @@ export default function App() {
                     <span className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
                       <Settings size={18} />
                     </span>
-                    <h3 className="font-bold text-slate-700">Localization</h3>
+                    <h3 className="font-bold text-slate-700">Localization & Global Taxes</h3>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <InputGroup label="BASE CURRENCY SYMBOL">
                       <input 
                         type="text"
-                        value={appConfig.currency}
-                        onChange={(e) => setAppConfig(prev => ({ ...prev, currency: e.target.value }))}
+                        value={localConfig.currency}
+                        onChange={(e) => setLocalConfig(prev => ({ ...prev, currency: e.target.value }))}
                         placeholder="e.g. Rs, $, €"
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-sm focus:outline-none focus:border-indigo-500 text-slate-700 font-bold"
                       />
                     </InputGroup>
                     <InputGroup label="DEFAULT VAT/TAX RATE %">
-                      <input 
-                        type="number"
-                        value={appConfig.taxRate}
-                        onChange={(e) => setAppConfig(prev => ({ ...prev, taxRate: parseFloat(e.target.value) || 0 }))}
-                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-sm focus:outline-none focus:border-indigo-500 text-slate-700 font-bold"
-                      />
+                      <div className="relative">
+                        <span className="absolute right-3 top-2 text-slate-300 text-sm">%</span>
+                        <input 
+                          type="number"
+                          value={localConfig.taxRate}
+                          onChange={(e) => setLocalConfig(prev => ({ ...prev, taxRate: parseFloat(e.target.value) || 0 }))}
+                          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-sm focus:outline-none focus:border-indigo-500 text-slate-700 font-bold"
+                        />
+                      </div>
                     </InputGroup>
                   </div>
                 </div>
@@ -1061,7 +1087,7 @@ export default function App() {
                       onClick={() => {
                         const name = prompt('New Paper Type Name:');
                         if (name) {
-                          setAppConfig(prev => ({
+                          setLocalConfig(prev => ({
                             ...prev,
                             paperRates: { ...prev.paperRates, [name]: 0 }
                           }));
@@ -1072,45 +1098,43 @@ export default function App() {
                       <Plus size={14} /> Add New Stock
                     </button>
                   </div>
-                  <div className="grid gap-4">
-                    {Object.entries(appConfig.paperRates).map(([type, rate]) => (
-                      <div key={type} className="flex items-center gap-4 group">
-                        <input 
-                          type="text"
+                  <div className="grid gap-6">
+                    {Object.entries(localConfig.paperRates).map(([type, rate]) => (
+                      <div key={type} className="flex items-center gap-4 group bg-slate-50/50 p-2 rounded-xl border border-transparent hover:border-slate-100 transition-all">
+                        <EditableLabel 
                           value={type}
-                          onChange={(e) => {
-                            const newName = e.target.value;
+                          onChange={(newName) => {
                             if (newName && newName !== type) {
-                              const newRates = { ...appConfig.paperRates };
-                              delete newRates[type];
-                              newRates[newName] = rate;
-                              setAppConfig(prev => ({ ...prev, paperRates: newRates }));
+                              setLocalConfig(prev => {
+                                const newRates = { ...prev.paperRates };
+                                delete newRates[type];
+                                newRates[newName] = rate as number;
+                                return { ...prev, paperRates: newRates };
+                              });
                             }
                           }}
-                          className="flex-1 text-sm font-medium text-slate-600 bg-transparent border-b border-transparent hover:border-slate-200 focus:border-indigo-400 focus:outline-none transition-all"
                         />
-                        <div className="relative w-32">
-                          <span className="absolute left-3 top-2 text-slate-400 text-sm">{appConfig.currency}</span>
-                          <input 
-                            type="number"
-                            value={rate}
-                            onChange={(e) => {
-                              const newRate = parseFloat(e.target.value) || 0;
-                              setAppConfig(prev => ({
+                        <div className="w-36">
+                          <ConfigInput 
+                            value={rate as number}
+                            currency={localConfig.currency}
+                            onChange={(newRate) => {
+                              setLocalConfig(prev => ({
                                 ...prev,
                                 paperRates: { ...prev.paperRates, [type]: newRate }
                               }));
                             }}
-                            className="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded text-sm focus:outline-none focus:border-indigo-500 text-slate-700 font-mono"
                           />
                         </div>
                         <button 
                           onClick={() => {
-                            const newRates = { ...appConfig.paperRates };
-                            delete newRates[type];
-                            setAppConfig(prev => ({ ...prev, paperRates: newRates }));
+                            setLocalConfig(prev => {
+                              const newRates = { ...prev.paperRates };
+                              delete newRates[type];
+                              return { ...prev, paperRates: newRates };
+                            });
                           }}
-                          className="opacity-0 group-hover:opacity-100 p-2 text-rose-400 hover:text-rose-600 transition-all cursor-pointer"
+                          className="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer"
                         >
                           <Trash2 size={16} />
                         </button>
@@ -1125,48 +1149,57 @@ export default function App() {
                     <Printer size={18} className="text-amber-500" />
                     <h3 className="font-bold text-slate-700">Production & Finishing Rates</h3>
                   </div>
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                       <InputGroup label="BASE PRINTING RATE (PER 1K)">
                         <RateRow 
-                          label={appConfig.labels.printingRatePerK} 
-                          onLabelChange={(v) => setAppConfig(prev => ({ ...prev, labels: { ...prev.labels, printingRatePerK: v }}))}
-                          value={appConfig.printingRatePerK} 
-                          onChange={(v) => setAppConfig(prev => ({ ...prev, printingRatePerK: v }))} 
-                          currency={appConfig.currency}
+                          label={localConfig.labels.printingRatePerK} 
+                          onLabelChange={(v) => setLocalConfig(prev => ({ ...prev, labels: { ...prev.labels, printingRatePerK: v }}))}
+                          value={localConfig.printingRatePerK} 
+                          onChange={(v) => setLocalConfig(prev => ({ ...prev, printingRatePerK: v }))} 
+                          currency={localConfig.currency}
                         />
                       </InputGroup>
                       <InputGroup label="PLATE CHARGES (PER SET)">
                         <RateRow 
-                          label={appConfig.labels.plateCharges} 
-                          onLabelChange={(v) => setAppConfig(prev => ({ ...prev, labels: { ...prev.labels, plateCharges: v }}))}
-                          value={appConfig.plateCharges} 
-                          onChange={(v) => setAppConfig(prev => ({ ...prev, plateCharges: v }))} 
-                          currency={appConfig.currency}
+                          label={localConfig.labels.plateCharges} 
+                          onLabelChange={(v) => setLocalConfig(prev => ({ ...prev, labels: { ...prev.labels, plateCharges: v }}))}
+                          value={localConfig.plateCharges} 
+                          onChange={(v) => setLocalConfig(prev => ({ ...prev, plateCharges: v }))} 
+                          currency={localConfig.currency}
+                        />
+                      </InputGroup>
+                      <InputGroup label="MACHINE MAKE-READY">
+                        <RateRow 
+                          label={localConfig.labels.makeReady} 
+                          onLabelChange={(v) => setLocalConfig(prev => ({ ...prev, labels: { ...prev.labels, makeReady: v }}))}
+                          value={localConfig.makeReady} 
+                          onChange={(v) => setLocalConfig(prev => ({ ...prev, makeReady: v }))} 
+                          currency={localConfig.currency}
                         />
                       </InputGroup>
                     </div>
 
-                    <div className="pt-4 border-t border-slate-100">
-                      <h4 className="text-[10px] font-bold text-slate-400 uppercase mb-4">Post-Press Rates</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
-                        <RateRow label={appConfig.labels.laminationGlossRate} onLabelChange={(v) => setAppConfig(prev => ({ ...prev, labels: { ...prev.labels, laminationGlossRate: v }}))} value={appConfig.laminationGlossRate} onChange={(v) => setAppConfig(prev => ({ ...prev, laminationGlossRate: v }))} currency={appConfig.currency} />
-                        <RateRow label={appConfig.labels.laminationMattRate} onLabelChange={(v) => setAppConfig(prev => ({ ...prev, labels: { ...prev.labels, laminationMattRate: v }}))} value={appConfig.laminationMattRate} onChange={(v) => setAppConfig(prev => ({ ...prev, laminationMattRate: v }))} currency={appConfig.currency} />
-                        <RateRow label={appConfig.labels.spotUVSetup} onLabelChange={(v) => setAppConfig(prev => ({ ...prev, labels: { ...prev.labels, spotUVSetup: v }}))} value={appConfig.spotUVSetup} onChange={(v) => setAppConfig(prev => ({ ...prev, spotUVSetup: v }))} currency={appConfig.currency} />
-                        <RateRow label={appConfig.labels.spotUVRate} onLabelChange={(v) => setAppConfig(prev => ({ ...prev, labels: { ...prev.labels, spotUVRate: v }}))} value={appConfig.spotUVRate} onChange={(v) => setAppConfig(prev => ({ ...prev, spotUVRate: v }))} currency={appConfig.currency} />
-                        <RateRow label={appConfig.labels.foilingSetup} onLabelChange={(v) => setAppConfig(prev => ({ ...prev, labels: { ...prev.labels, foilingSetup: v }}))} value={appConfig.foilingSetup} onChange={(v) => setAppConfig(prev => ({ ...prev, foilingSetup: v }))} currency={appConfig.currency} />
-                        <RateRow label={appConfig.labels.foilingRate} onLabelChange={(v) => setAppConfig(prev => ({ ...prev, labels: { ...prev.labels, foilingRate: v }}))} value={appConfig.foilingRate} onChange={(v) => setAppConfig(prev => ({ ...prev, foilingRate: v }))} currency={appConfig.currency} />
-                        <RateRow label={appConfig.labels.dieCuttingSetup} onLabelChange={(v) => setAppConfig(prev => ({ ...prev, labels: { ...prev.labels, dieCuttingSetup: v }}))} value={appConfig.dieCuttingSetup} onChange={(v) => setAppConfig(prev => ({ ...prev, dieCuttingSetup: v }))} currency={appConfig.currency} />
-                        <RateRow label={appConfig.labels.dieCuttingRate} onLabelChange={(v) => setAppConfig(prev => ({ ...prev, labels: { ...prev.labels, dieCuttingRate: v }}))} value={appConfig.dieCuttingRate} onChange={(v) => setAppConfig(prev => ({ ...prev, dieCuttingRate: v }))} currency={appConfig.currency} />
-                        <RateRow label={appConfig.labels.foldingRate} onLabelChange={(v) => setAppConfig(prev => ({ ...prev, labels: { ...prev.labels, foldingRate: v }}))} value={appConfig.foldingRate} onChange={(v) => setAppConfig(prev => ({ ...prev, foldingRate: v }))} currency={appConfig.currency} />
-                        <RateRow label={appConfig.labels.coldFoilSetup} onLabelChange={(v) => setAppConfig(prev => ({ ...prev, labels: { ...prev.labels, coldFoilSetup: v }}))} value={appConfig.coldFoilSetup} onChange={(v) => setAppConfig(prev => ({ ...prev, coldFoilSetup: v }))} currency={appConfig.currency} />
-                        <RateRow label={appConfig.labels.coldFoilRate} onLabelChange={(v) => setAppConfig(prev => ({ ...prev, labels: { ...prev.labels, coldFoilRate: v }}))} value={appConfig.coldFoilRate} onChange={(v) => setAppConfig(prev => ({ ...prev, coldFoilRate: v }))} currency={appConfig.currency} />
-                        <RateRow label={appConfig.labels.embossSetup} onLabelChange={(v) => setAppConfig(prev => ({ ...prev, labels: { ...prev.labels, embossSetup: v }}))} value={appConfig.embossSetup} onChange={(v) => setAppConfig(prev => ({ ...prev, embossSetup: v }))} currency={appConfig.currency} />
-                        <RateRow label={appConfig.labels.embossRate} onLabelChange={(v) => setAppConfig(prev => ({ ...prev, labels: { ...prev.labels, embossRate: v }}))} value={appConfig.embossRate} onChange={(v) => setAppConfig(prev => ({ ...prev, embossRate: v }))} currency={appConfig.currency} />
-                        <RateRow label={appConfig.labels.debossSetup} onLabelChange={(v) => setAppConfig(prev => ({ ...prev, labels: { ...prev.labels, debossSetup: v }}))} value={appConfig.debossSetup} onChange={(v) => setAppConfig(prev => ({ ...prev, debossSetup: v }))} currency={appConfig.currency} />
-                        <RateRow label={appConfig.labels.debossRate} onLabelChange={(v) => setAppConfig(prev => ({ ...prev, labels: { ...prev.labels, debossRate: v }}))} value={appConfig.debossRate} onChange={(v) => setAppConfig(prev => ({ ...prev, debossRate: v }))} currency={appConfig.currency} />
-                        <RateRow label={appConfig.labels.perforationSetup} onLabelChange={(v) => setAppConfig(prev => ({ ...prev, labels: { ...prev.labels, perforationSetup: v }}))} value={appConfig.perforationSetup} onChange={(v) => setAppConfig(prev => ({ ...prev, perforationSetup: v }))} currency={appConfig.currency} />
-                        <RateRow label={appConfig.labels.creasingSetup} onLabelChange={(v) => setAppConfig(prev => ({ ...prev, labels: { ...prev.labels, creasingSetup: v }}))} value={appConfig.creasingSetup} onChange={(v) => setAppConfig(prev => ({ ...prev, creasingSetup: v }))} currency={appConfig.currency} />
+                    <div className="pt-6 border-t border-slate-100">
+                      <h4 className="text-[10px] font-bold text-slate-400 uppercase mb-4 tracking-widest">Specialist Finishing / Post-Press</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4">
+                        <RateRow label={localConfig.labels.laminationGlossRate} onLabelChange={(v) => setLocalConfig(prev => ({ ...prev, labels: { ...prev.labels, laminationGlossRate: v }}))} value={localConfig.laminationGlossRate} onChange={(v) => setLocalConfig(prev => ({ ...prev, laminationGlossRate: v }))} currency={localConfig.currency} />
+                        <RateRow label={localConfig.labels.laminationMattRate} onLabelChange={(v) => setLocalConfig(prev => ({ ...prev, labels: { ...prev.labels, laminationMattRate: v }}))} value={localConfig.laminationMattRate} onChange={(v) => setLocalConfig(prev => ({ ...prev, laminationMattRate: v }))} currency={localConfig.currency} />
+                        <RateRow label={localConfig.labels.spotUVSetup} onLabelChange={(v) => setLocalConfig(prev => ({ ...prev, labels: { ...prev.labels, spotUVSetup: v }}))} value={localConfig.spotUVSetup} onChange={(v) => setLocalConfig(prev => ({ ...prev, spotUVSetup: v }))} currency={localConfig.currency} />
+                        <RateRow label={localConfig.labels.spotUVRate} onLabelChange={(v) => setLocalConfig(prev => ({ ...prev, labels: { ...prev.labels, spotUVRate: v }}))} value={localConfig.spotUVRate} onChange={(v) => setLocalConfig(prev => ({ ...prev, spotUVRate: v }))} currency={localConfig.currency} />
+                        <RateRow label={localConfig.labels.foilingSetup} onLabelChange={(v) => setLocalConfig(prev => ({ ...prev, labels: { ...prev.labels, foilingSetup: v }}))} value={localConfig.foilingSetup} onChange={(v) => setLocalConfig(prev => ({ ...prev, foilingSetup: v }))} currency={localConfig.currency} />
+                        <RateRow label={localConfig.labels.foilingRate} onLabelChange={(v) => setLocalConfig(prev => ({ ...prev, labels: { ...prev.labels, foilingRate: v }}))} value={localConfig.foilingRate} onChange={(v) => setLocalConfig(prev => ({ ...prev, foilingRate: v }))} currency={localConfig.currency} />
+                        <RateRow label={localConfig.labels.dieCuttingSetup} onLabelChange={(v) => setLocalConfig(prev => ({ ...prev, labels: { ...prev.labels, dieCuttingSetup: v }}))} value={localConfig.dieCuttingSetup} onChange={(v) => setLocalConfig(prev => ({ ...prev, dieCuttingSetup: v }))} currency={localConfig.currency} />
+                        <RateRow label={localConfig.labels.dieCuttingRate} onLabelChange={(v) => setLocalConfig(prev => ({ ...prev, labels: { ...prev.labels, dieCuttingRate: v }}))} value={localConfig.dieCuttingRate} onChange={(v) => setLocalConfig(prev => ({ ...prev, dieCuttingRate: v }))} currency={localConfig.currency} />
+                        <RateRow label={localConfig.labels.foldingRate} onLabelChange={(v) => setLocalConfig(prev => ({ ...prev, labels: { ...prev.labels, foldingRate: v }}))} value={localConfig.foldingRate} onChange={(v) => setLocalConfig(prev => ({ ...prev, foldingRate: v }))} currency={localConfig.currency} />
+                        <RateRow label={localConfig.labels.coldFoilSetup} onLabelChange={(v) => setLocalConfig(prev => ({ ...prev, labels: { ...prev.labels, coldFoilSetup: v }}))} value={localConfig.coldFoilSetup} onChange={(v) => setLocalConfig(prev => ({ ...prev, coldFoilSetup: v }))} currency={localConfig.currency} />
+                        <RateRow label={localConfig.labels.coldFoilRate} onLabelChange={(v) => setLocalConfig(prev => ({ ...prev, labels: { ...prev.labels, coldFoilRate: v }}))} value={localConfig.coldFoilRate} onChange={(v) => setLocalConfig(prev => ({ ...prev, coldFoilRate: v }))} currency={localConfig.currency} />
+                        <RateRow label={localConfig.labels.embossSetup} onLabelChange={(v) => setLocalConfig(prev => ({ ...prev, labels: { ...prev.labels, embossSetup: v }}))} value={localConfig.embossSetup} onChange={(v) => setLocalConfig(prev => ({ ...prev, embossSetup: v }))} currency={localConfig.currency} />
+                        <RateRow label={localConfig.labels.embossRate} onLabelChange={(v) => setLocalConfig(prev => ({ ...prev, labels: { ...prev.labels, embossRate: v }}))} value={localConfig.embossRate} onChange={(v) => setLocalConfig(prev => ({ ...prev, embossRate: v }))} currency={localConfig.currency} />
+                        <RateRow label={localConfig.labels.debossSetup} onLabelChange={(v) => setLocalConfig(prev => ({ ...prev, labels: { ...prev.labels, debossSetup: v }}))} value={localConfig.debossSetup} onChange={(v) => setLocalConfig(prev => ({ ...prev, debossSetup: v }))} currency={localConfig.currency} />
+                        <RateRow label={localConfig.labels.debossRate} onLabelChange={(v) => setLocalConfig(prev => ({ ...prev, labels: { ...prev.labels, debossRate: v }}))} value={localConfig.debossRate} onChange={(v) => setLocalConfig(prev => ({ ...prev, debossRate: v }))} currency={localConfig.currency} />
+                        <RateRow label={localConfig.labels.perforationSetup} onLabelChange={(v) => setLocalConfig(prev => ({ ...prev, labels: { ...prev.labels, perforationSetup: v }}))} value={localConfig.perforationSetup} onChange={(v) => setLocalConfig(prev => ({ ...prev, perforationSetup: v }))} currency={localConfig.currency} />
+                        <RateRow label={localConfig.labels.creasingSetup} onLabelChange={(v) => setLocalConfig(prev => ({ ...prev, labels: { ...prev.labels, creasingSetup: v }}))} value={localConfig.creasingSetup} onChange={(v) => setLocalConfig(prev => ({ ...prev, creasingSetup: v }))} currency={localConfig.currency} />
                       </div>
                     </div>
                   </div>
@@ -1183,7 +1216,7 @@ export default function App() {
                       onClick={() => {
                         const name = prompt('New Custom Field Name:');
                         if (name) {
-                          setAppConfig(prev => ({
+                          setLocalConfig(prev => ({
                             ...prev,
                             customRates: { ...prev.customRates, [name]: 0 }
                           }));
@@ -1194,51 +1227,49 @@ export default function App() {
                       <Plus size={14} /> Add Custom Field
                     </button>
                   </div>
-                  <div className="grid gap-4">
-                    {Object.entries(appConfig.customRates).map(([name, rate]) => (
-                      <div key={name} className="flex items-center gap-4 group">
-                        <input 
-                          type="text"
+                  <div className="grid gap-6">
+                    {Object.entries(localConfig.customRates).map(([name, rate]) => (
+                      <div key={name} className="flex items-center gap-4 group bg-slate-50/50 p-2 rounded-xl border border-transparent hover:border-slate-100 transition-all">
+                        <EditableLabel 
                           value={name}
-                          onChange={(e) => {
-                            const newName = e.target.value;
+                          onChange={(newName) => {
                             if (newName && newName !== name) {
-                              const newRates = { ...appConfig.customRates };
-                              delete newRates[name];
-                              newRates[newName] = rate;
-                              setAppConfig(prev => ({ ...prev, customRates: newRates }));
+                              setLocalConfig(prev => {
+                                const newRates = { ...prev.customRates };
+                                delete newRates[name];
+                                newRates[newName] = rate as number;
+                                return { ...prev, customRates: newRates };
+                              });
                             }
                           }}
-                          className="flex-1 text-sm font-medium text-slate-600 bg-transparent border-b border-transparent hover:border-slate-200 focus:border-emerald-400 focus:outline-none transition-all"
                         />
-                        <div className="relative w-32">
-                          <span className="absolute left-3 top-2 text-slate-400 text-sm">{appConfig.currency}</span>
-                          <input 
-                            type="number"
-                            value={rate}
-                            onChange={(e) => {
-                              const newRate = parseFloat(e.target.value) || 0;
-                              setAppConfig(prev => ({
+                        <div className="w-36">
+                          <ConfigInput 
+                            value={rate as number}
+                            currency={localConfig.currency}
+                            onChange={(newRate) => {
+                              setLocalConfig(prev => ({
                                 ...prev,
                                 customRates: { ...prev.customRates, [name]: newRate }
                               }));
                             }}
-                            className="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded text-sm focus:outline-none focus:border-emerald-500 text-slate-700 font-mono"
                           />
                         </div>
                         <button 
                           onClick={() => {
-                            const newRates = { ...appConfig.customRates };
-                            delete newRates[name];
-                            setAppConfig(prev => ({ ...prev, customRates: newRates }));
+                            setLocalConfig(prev => {
+                              const newRates = { ...prev.customRates };
+                              delete newRates[name];
+                              return { ...prev, customRates: newRates };
+                            });
                           }}
-                          className="opacity-0 group-hover:opacity-100 p-2 text-rose-400 hover:text-rose-600 transition-all cursor-pointer"
+                          className="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer"
                         >
                           <Trash2 size={16} />
                         </button>
                       </div>
                     ))}
-                    {Object.keys(appConfig.customRates).length === 0 && (
+                    {Object.keys(localConfig.customRates).length === 0 && (
                       <div className="text-center py-4 border border-dashed border-slate-200 rounded-lg text-slate-400 text-xs italic">
                         No custom fields defined. These will be added as per-unit costs.
                       </div>
@@ -1246,15 +1277,27 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="flex justify-end">
-                  <button 
-                    onClick={() => {
-                       setView('estimator');
-                    }}
-                    className="px-6 py-2 bg-slate-900 text-white rounded-lg font-bold hover:bg-black transition-all cursor-pointer"
-                  >
-                    Return to Estimator
-                  </button>
+                {/* Bottom Action Bar */}
+                <div className="flex items-center justify-between bg-white border border-slate-200 p-4 rounded-xl shadow-lg sticky bottom-0 z-20">
+                  <p className="text-xs text-slate-500 max-w-sm">Changes made here affect all future estimates. Ensure accuracy before saving.</p>
+                  <div className="flex gap-4">
+                    <button 
+                      onClick={() => setLocalConfig(appConfig)}
+                      className="px-4 py-2 text-slate-600 font-bold text-sm hover:bg-slate-50 rounded-lg transition-all"
+                    >
+                      Discard Draft
+                    </button>
+                    <button 
+                      onClick={() => {
+                         setAppConfig(localConfig);
+                         setView('estimator');
+                      }}
+                      className="px-8 py-2 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 flex items-center gap-2"
+                    >
+                      <Save size={18} />
+                      Save All Settings
+                    </button>
+                  </div>
                 </div>
               </div>
             </motion.div>
@@ -1288,7 +1331,10 @@ function ConfigInput({ value, onChange, currency }: { value: number, onChange: (
       <input 
         type="number"
         value={value}
-        onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+        onChange={(e) => {
+          const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
+          onChange(isNaN(val) ? 0 : val);
+        }}
         className="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded text-sm text-slate-700 focus:outline-none focus:border-indigo-500"
       />
     </div>
@@ -1297,18 +1343,17 @@ function ConfigInput({ value, onChange, currency }: { value: number, onChange: (
 
 function RateRow({ label, onLabelChange, value, onChange, currency }: { label: string, onLabelChange?: (v: string) => void, value: number, onChange: (v: number) => void, currency: string }) {
   return (
-    <div className="flex items-center justify-between gap-4">
+    <div className="flex items-center justify-between gap-4 py-1">
       {onLabelChange ? (
-        <input 
-          type="text"
-          value={label}
-          onChange={(e) => onLabelChange(e.target.value)}
-          className="flex-1 text-[11px] font-bold text-slate-400 uppercase tracking-wider bg-transparent border-b border-transparent hover:border-slate-100 focus:outline-none focus:border-indigo-200 transition-all"
+        <EditableLabel 
+          value={label} 
+          onChange={onLabelChange} 
+          className="text-[11px] font-bold text-slate-500 uppercase tracking-wider"
         />
       ) : (
         <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">{label}</span>
       )}
-      <div className="w-24">
+      <div className="w-28 flex-shrink-0">
         <ConfigInput value={value} onChange={onChange} currency={currency} />
       </div>
     </div>
@@ -1352,6 +1397,78 @@ function Metric({ icon, label, value }: { icon: React.ReactNode, label: string, 
         <span className="text-[10px] font-bold uppercase tracking-wide">{label}</span>
       </div>
       <div className="text-sm font-mono font-bold text-slate-800">{value}</div>
+    </div>
+  );
+}
+
+function EditableLabel({ 
+  value, 
+  onChange, 
+  className = "" 
+}: { 
+  value: string, 
+  onChange: (v: string) => void, 
+  className?: string 
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [tempValue, setTempValue] = useState(value);
+
+  // Sync temp value if external value changes while not editing
+  useEffect(() => {
+    if (!isEditing) setTempValue(value);
+  }, [value, isEditing]);
+
+  if (isEditing) {
+    return (
+      <div className="flex items-center gap-2 flex-1">
+        <input 
+          autoFocus
+          type="text"
+          value={tempValue}
+          onChange={(e) => setTempValue(e.target.value)}
+          className={`flex-1 bg-white border border-indigo-300 rounded px-2 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 ${className}`}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              onChange(tempValue);
+              setIsEditing(false);
+            }
+            if (e.key === 'Escape') {
+              setTempValue(value);
+              setIsEditing(false);
+            }
+          }}
+        />
+        <button 
+          onClick={() => {
+            onChange(tempValue);
+            setIsEditing(false);
+          }}
+          className="p-1 text-emerald-500 hover:bg-emerald-50 rounded transition-colors"
+        >
+          <Check size={14} />
+        </button>
+        <button 
+          onClick={() => {
+            setTempValue(value);
+            setIsEditing(false);
+          }}
+          className="p-1 text-slate-400 hover:bg-slate-50 rounded transition-colors"
+        >
+          <X size={14} />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2 group flex-1">
+      <span className={`text-sm font-medium text-slate-600 truncate ${className}`}>{value}</span>
+      <button 
+        onClick={() => setIsEditing(true)}
+        className="p-1 text-slate-300 opacity-0 group-hover:opacity-100 hover:text-indigo-500 hover:bg-indigo-50 rounded transition-all"
+      >
+        <Pencil size={12} />
+      </button>
     </div>
   );
 }
