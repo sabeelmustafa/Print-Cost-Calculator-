@@ -32,15 +32,17 @@ import {
   ChevronDown,
   ArrowRight,
   Briefcase,
-  Maximize2
+  Maximize2,
+  HelpCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import ReactMarkdown from 'react-markdown';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 // --- Types ---
 
-type ViewType = 'estimator' | 'history' | 'config';
+type ViewType = 'estimator' | 'history' | 'config' | 'guide';
 type BindingType = 'none' | 'perfect' | 'saddle-stitch' | 'spiral';
 type LaminationType = 'none' | 'gloss' | 'matt';
 type ProjectType = 'flyer' | 'brochure' | 'packaging' | 'label' | 'rigid-box' | 'custom';
@@ -683,6 +685,12 @@ export default function App() {
             active={view === 'config'} 
             onClick={() => setView('config')}
           />
+          <div className="flex-1"></div>
+          <MiniSidebarItem 
+            icon={<HelpCircle className="w-6 h-6 text-slate-400" />} 
+            active={view === 'guide'} 
+            onClick={() => setView('guide')}
+          />
         </nav>
         <div className="mt-auto">
           <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-[10px] text-slate-400 font-bold">SM</div>
@@ -703,6 +711,10 @@ export default function App() {
           <Settings size={20} />
           <span className="text-[10px] font-bold uppercase tracking-widest">Setup</span>
         </button>
+        <button onClick={() => setView('guide')} className={`flex flex-col items-center gap-1 ${view === 'guide' ? 'text-indigo-400' : 'text-slate-500'}`}>
+          <HelpCircle size={20} />
+          <span className="text-[10px] font-bold uppercase tracking-widest">Guide</span>
+        </button>
       </nav>
 
       {/* --- Main Content Body --- */}
@@ -715,11 +727,13 @@ export default function App() {
                 {view === 'estimator' && 'Project Estimator'}
                 {view === 'history' && 'Estimate History'}
                 {view === 'config' && 'Master Settings'}
+                {view === 'guide' && 'User Guide & Documentation'}
               </h1>
               <span className="text-[10px] text-slate-400 font-medium uppercase tracking-tighter mt-1 hidden md:block">
                 {view === 'estimator' && 'Professional Print Costing Engine'}
                 {view === 'history' && 'Review saved calculations'}
                 {view === 'config' && 'System rates & localization'}
+                {view === 'guide' && 'Understanding logic and features'}
               </span>
             </div>
           </div>
@@ -729,6 +743,7 @@ export default function App() {
                 <button 
                   onClick={() => setData({
                     jobName: '',
+                    projectType: 'flyer',
                     quantity: 1000,
                     sides: 1,
                     width: 8.5,
@@ -739,6 +754,11 @@ export default function App() {
                     parentHeight: 36,
                     sheetsConsumed: 0,
                     paperRate: appConfig.paperRates['Art Paper']?.price || 150,
+                    useGrayboard: false,
+                    grayboardType: 'Standard',
+                    grayboardRate: 0,
+                    grayboardParentWidth: 23,
+                    grayboardParentHeight: 36,
                     colorsFront: 4,
                     colorsBack: 4,
                     plateCharges: appConfig.plateCharges,
@@ -2004,12 +2024,24 @@ export default function App() {
                       }}
                       className="flex-1 md:flex-none px-6 md:px-8 py-2 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 flex items-center justify-center gap-2 text-xs md:text-sm"
                     >
-                      <Save size={16} md:size={18} />
+                      <Save size={16} />
                       Save All
                     </button>
                   </div>
                 </div>
               </div>
+            </motion.div>
+          )}
+
+          {view === 'guide' && (
+            <motion.div 
+              key="guide"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="flex-1 overflow-y-auto"
+            >
+              <GuideView />
             </motion.div>
           )}
         </AnimatePresence>
@@ -2190,6 +2222,108 @@ function HistoryCard({ estimate, onEdit, onDelete, onPDF, currency }: HistoryCar
         Restore Estimate
       </button>
     </motion.div>
+  );
+}
+
+const guideMarkdown = `# Print Flow Pro: User Guide & Calculation Logic
+
+Welcome to **Print Flow Pro**, the precision printing estimator. This guide explains how the system calculates your costs and how to use the features.
+
+---
+
+## 🛠 Calculation engine: How it works
+
+The calculator uses **Imposition & Weight** logic to derive real-world costs.
+
+### 1. Imposition Logic (Outs)
+The system calculates how many project units fit onto a standard "Press Sheet".
+- **Formula:** \`(Sheet Width / Job Width) * (Sheet Height / Job Height)\` (System optimized).
+- **Result:** This determines your "Outs" – fewer outs mean more paper sheets are required.
+
+### 2. Paper Weight calculations
+Total weight of paper affects handling and cost.
+- **Formula:** \`(Total Sheets * Sheet Width * Sheet Height * GSM) / 1,000,000,000\` = Weight in KG.
+
+### 3. Cost Breakdown
+- **Material Cost:** \`Total Sheets * Sheet Price\` + \`Board Cost\`.
+- **Printing Cost:** \`(Total Sheets * Impression Rate) + Plate Costs + Make-Ready\`.
+- **Applied Finishes:** Area-based costs (SQ Inches) for Foiling/Spot UV.
+- **Profit Margin:** Percentage markup on **Production Cost**.
+
+---
+
+## 📋 Section-by-Section Breakdown
+
+### Section 1: Project Blueprint
+- **Project Type:** Presets (Flyer, Brochure, Packaging).
+- **Quantity:** Total finished units required.
+
+### Section 2: Materials & Weights
+- **GSM:** Grams per Square Meter.
+- **Sheet Price:** Cost per press sheet.
+
+### Section 3: Printing Setup
+- **Machine Selection:** Presets for Small (SRA3) to Large (B1) formats.
+- **Waste Sheets:** Buffer for setup (usually 50-100 per color).
+
+### Section 4 & 5: Applied Finishes
+- **Area-Based:** Foiling/Spot UV/Embossing costs are derived from SQ Inches.
+- **Setup:** Fixed base costs for machine preparation.
+
+---
+
+## 💾 Saving & History
+- **Save Estimate:** Stores current configuration.
+- **History Tab:** View past estimates, compare, or restore old configurations.
+
+---
+
+## 💡 Pro Tips
+- **Optimize Imposition:** Try reducing job dimensions (e.g., 210mm to 205mm) to fit an extra unit on the sheet.
+- **Wastage:** High-complexity jobs (Spot UV + Foil) need higher waste counts.
+`;
+
+function GuideView() {
+  return (
+    <div className="max-w-4xl mx-auto py-12 px-6">
+      <div className="bg-white border border-slate-200 rounded-[40px] p-8 md:p-12 shadow-xl shadow-slate-200/50">
+        <div className="flex items-center gap-4 mb-10 pb-10 border-b border-slate-100">
+           <div className="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-100">
+              <HelpCircle size={32} />
+           </div>
+           <div>
+              <h2 className="text-3xl font-black text-slate-800 tracking-tight">User Guide</h2>
+              <p className="text-sm text-slate-400 font-medium italic">Master the art of printing estimation.</p>
+           </div>
+        </div>
+        
+        <div className="prose prose-slate max-w-none 
+          prose-headings:font-black prose-headings:tracking-tight prose-headings:text-slate-800
+          prose-h1:text-4xl prose-h2:text-2xl prose-h2:mt-12 prose-h2:mb-6 prose-h2:pb-2 prose-h2:border-b prose-h2:border-slate-100
+          prose-h3:text-lg prose-h3:mt-8 prose-h3:mb-4 prose-h3:text-indigo-600
+          prose-p:text-slate-600 prose-p:leading-relaxed prose-p:mb-6
+          prose-li:text-slate-600 prose-li:mb-2
+          prose-strong:text-slate-900 prose-strong:font-bold
+          prose-code:text-indigo-600 prose-code:bg-indigo-50 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:font-mono
+          prose-hr:border-slate-100 prose-hr:my-12
+        ">
+          <ReactMarkdown>{guideMarkdown}</ReactMarkdown>
+        </div>
+        
+        <div className="mt-16 p-8 bg-slate-900 rounded-[32px] text-white flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl">
+           <div className="space-y-1 text-center md:text-left">
+              <h4 className="text-xl font-bold">Ready to start?</h4>
+              <p className="text-slate-400 text-sm">Jump back into the calculator and start saving costs.</p>
+           </div>
+           <button 
+             className="px-8 py-3 bg-indigo-600 hover:bg-white hover:text-slate-900 text-white rounded-2xl font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-500/20 active:scale-95"
+             onClick={() => window.location.reload()} // Quick hack to get back or handle state
+           >
+             Go to Calculator
+           </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
