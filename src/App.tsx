@@ -480,13 +480,11 @@ export default function App() {
       grayboardCost: isNaN(grayboardCost) ? 0 : grayboardCost,
       grayboardSheets: isNaN(grayboardSheets) ? 0 : grayboardSheets,
       breakdown: [
-        { label: 'Paper Stock', value: isNaN(paperCost) ? 0 : paperCost, color: 'bg-indigo-500' },
-        ...(useGrayboard ? [{ label: 'Structural Board', value: isNaN(grayboardCost) ? 0 : grayboardCost, color: 'bg-slate-400' }] : []),
-        { label: 'Printing & Plates', value: isNaN(totalPrintingCost + plateCost + makeReady) ? 0 : totalPrintingCost + plateCost + makeReady, color: 'bg-emerald-500' },
-        { label: 'Finishing & Post-Press', value: isNaN(finishingCost + customRatesTotal) ? 0 : finishingCost + customRatesTotal, color: 'bg-amber-400' },
-        { label: 'Logistics', value: isNaN(shipping) ? 0 : shipping, color: 'bg-slate-400' },
-        { label: 'Commercial Margin', value: isNaN(profitAmount) ? 0 : profitAmount, color: 'bg-purple-500' },
-        { label: 'Taxes/VAT', value: isNaN(taxAmount) ? 0 : taxAmount, color: 'bg-rose-400' },
+        { label: 'Section 2: Materials', value: (isNaN(paperCost) ? 0 : paperCost) + (isNaN(grayboardCost) ? 0 : grayboardCost), color: 'bg-indigo-500' },
+        { label: 'Section 3: Printing Setup', value: isNaN(totalPrintingCost + plateCost + makeReady) ? 0 : totalPrintingCost + plateCost + makeReady, color: 'bg-emerald-500' },
+        { label: 'Section 4 & 5: Applied Finishes', value: isNaN(finishingCost + customRatesTotal) ? 0 : finishingCost + customRatesTotal, color: 'bg-amber-400' },
+        { label: 'Section 6: Logistics & Tax', value: isNaN(shipping + taxAmount) ? 0 : shipping + taxAmount, color: 'bg-slate-400' },
+        { label: 'Final: Commercial Margin', value: isNaN(profitAmount) ? 0 : profitAmount, color: 'bg-purple-500' },
       ]
     };
   }, [data, appConfig]);
@@ -1388,35 +1386,52 @@ export default function App() {
                         </div>
                       </div>
 
-                      <div className="space-y-5">
-                        <h4 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Cost Allocation</h4>
-                        {results.breakdown.map((item, idx) => (
-                          <div key={idx} className="group cursor-default">
-                            <div className="flex justify-between text-[11px] items-end mb-1.5">
-                              <span className="text-slate-500 font-bold group-hover:text-indigo-600 transition-colors">{item.label}</span>
-                              <span className="font-mono font-bold text-slate-800 tracking-tighter">{appConfig.currency} {Math.round(item.value).toLocaleString()}</span>
-                            </div>
-                            <div className="w-full bg-slate-50 h-2 rounded-full overflow-hidden border border-slate-100/50">
-                              <motion.div 
-                                initial={{ width: 0 }}
-                                animate={{ width: `${Math.max(2, (item.value / results.totalCost) * 100)}%` }}
-                                transition={{ duration: 0.8, ease: "easeOut" }}
-                                className={`${item.color} h-full rounded-full shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]`}
-                              />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-
-                      <div className="pt-6 mt-6 border-t border-slate-100 space-y-5 flex-1">
-                        <div className="p-3 bg-rose-50/50 rounded-2xl border border-rose-100/50">
-                          <div className="text-[9px] font-black text-rose-400 uppercase mb-1">Tax Amount</div>
-                          <div className="text-sm font-black text-rose-700 font-mono tabular-nums">
-                            {appConfig.currency} {Math.round(results.taxAmount).toLocaleString()}
+                      <div className="space-y-6">
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                          <h4 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Calculator Breakdown</h4>
+                          <div className="flex items-center gap-1.5 px-2 py-0.5 bg-slate-50 rounded-full border border-slate-100">
+                             <div className="w-1 h-1 rounded-full bg-indigo-500"></div>
+                             <span className="text-[8px] font-bold text-slate-500 uppercase tracking-tighter">Section 1: {data.quantity} units</span>
                           </div>
                         </div>
 
-                        <div className="space-y-4 pt-2">
+                        <div className="space-y-5">
+                          {results.breakdown.map((item, idx) => (
+                            <div key={idx} className="group cursor-default">
+                              <div className="flex justify-between text-[11px] items-end mb-1.5">
+                                <span className="text-slate-500 font-bold group-hover:text-indigo-600 transition-colors uppercase tracking-tight">{item.label}</span>
+                                <span className="font-mono font-bold text-slate-800 tracking-tighter">{appConfig.currency} {Math.round(item.value).toLocaleString()}</span>
+                              </div>
+                              <div className="w-full bg-slate-50 h-1.5 rounded-full overflow-hidden border border-slate-100/30">
+                                <motion.div 
+                                  initial={{ width: 0 }}
+                                  animate={{ width: `${Math.max(1, (item.value / results.totalCost) * 100)}%` }}
+                                  transition={{ duration: 0.8, ease: "easeOut", delay: idx * 0.05 }}
+                                  className={`${item.color} h-full rounded-full`}
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col justify-center">
+                             <div className="text-[8px] font-black text-slate-400 uppercase mb-1">Production Cost</div>
+                             <div className="text-xs font-bold text-slate-700 font-mono tracking-tighter">
+                               {appConfig.currency} {Math.round(results.productionCost).toLocaleString()}
+                             </div>
+                          </div>
+                          <div className="p-3 bg-rose-50/50 rounded-2xl border border-rose-100/50 flex flex-col justify-center">
+                             <div className="text-[8px] font-black text-rose-400 uppercase mb-1">Taxes & Logistics</div>
+                             <div className="text-xs font-bold text-rose-700 font-mono tracking-tighter">
+                               {appConfig.currency} {Math.round(results.taxAmount + results.shipping).toLocaleString()}
+                             </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="pt-6 mt-6 border-t border-slate-100 flex-1">
+                        <div className="space-y-4">
                            <div className="p-4 bg-slate-900 rounded-2xl text-white shadow-xl shadow-slate-200">
                              <div className="flex items-center justify-between mb-4">
                                 <div className="p-2 bg-slate-800 rounded-lg">
